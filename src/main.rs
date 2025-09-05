@@ -95,23 +95,10 @@ fn interactive_menu() -> u8 {
 
 fn save_qr_png(code: &QrCode) {
     use image::Luma;
-    use std::path::PathBuf;
 
-    println!("Enter file path to save PNG (e.g. C:\\Users\\You\\Downloads\\qr.png):");
-    print!("> ");
-    std::io::stdout().flush().unwrap();
-
-    let input = read_line_crossterm();
-    let input = input.trim();
-
-    let file_path = if input.is_empty() {
-        let mut downloads =
-            dirs::download_dir().unwrap_or_else(|| std::env::current_dir().unwrap());
-        downloads.push("rustyqr_output.png");
-        downloads
-    } else {
-        PathBuf::from(input)
-    };
+    let mut downloads = dirs::download_dir().unwrap_or_else(|| std::env::current_dir().unwrap());
+    downloads.push("rustyqr_output.png");
+    let file_path = downloads;
 
     let image = code.render::<Luma<u8>>().min_dimensions(256, 256).build();
 
