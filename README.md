@@ -1,9 +1,9 @@
-# 📦 RustyQR
+# RustyQR
 
 **A tiny Rust-powered QR code generator that lives on your terminal.**  
 No accounts. No tracking. No “Pay to keep your QR alive” nonsense. Just free, local, and yours.
 
-![RustyQR Terminal Screenshot](/docs/screenshot.png) <!-- Optional: add an actual screenshot -->
+![RustyQR Terminal Screenshot](/docs/screenshot.png)
 
 ---
 
@@ -34,9 +34,9 @@ So I built **RustyQR** — a simple Rust terminal app that:
 
 Just download the `.exe` file below and run it directly in your terminal:
 
-📦 [Download RustyQR.exe](https://github.com/yourusername/rustyqr/releases/latest)  
-> ✅ Works on Windows (no install needed)
-> Maybe works on Mac/Linux?
+📦 [Download RustyQR.exe](https://github.com/ammarali0416/rustyqr/releases/latest)  
+> ✅ Works on Windows (no install needed) <br>
+> ❓ Maybe works on Mac/Linux?
 
 ---
 
@@ -52,7 +52,7 @@ Just download the `.exe` file below and run it directly in your terminal:
 If you're a Rustacean:
 
 ```sh
-git clone https://github.com/yourusername/rustyqr
+git clone https://github.com/ammarali0416/rustyqr
 cd rustyqr
 cargo run
 ```
