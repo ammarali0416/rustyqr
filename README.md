@@ -7,7 +7,7 @@ No accounts. No tracking. No “Pay to keep your QR alive” nonsense. Just free
 
 ---
 
-## 🚀 The Story (Why RustyQR Exists)
+## 🚀 Why RustyQR Exists
 
 A few months ago, I used a site called [qrco.de](https://qrco.de) to generate a QR code linking to my LinkedIn profile.  
 I slapped it on a business card template, ordered 50 cards from Canva, and felt like a pro.  
