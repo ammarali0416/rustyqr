@@ -22,6 +22,7 @@ fn print_colorful_title() {
         "                                             ███ ▒███                               ",
         "                                            ▒▒██████                                ",
         "                                             ▒▒▒▒▒▒                                 ",
+        "I hate you qrco.de - Ammar"
     ];
 
     for (i, line) in ascii_art.iter().enumerate() {
