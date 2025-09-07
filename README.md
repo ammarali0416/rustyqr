@@ -22,9 +22,8 @@ But we have QR code generation libraries right?
 
 So I built **RustyQR** — a simple Rust terminal app that:
 - Takes a URL (or any text)
-- Lets you choose:
-  - Print it in the terminal
-  - Save it as a PNG
+- Prints the QR in your terminal
+- Saves a high-quality PNG to your Downloads folder automatically
 - Never breaks (hopefully).
 - Never charges you a dime.
 

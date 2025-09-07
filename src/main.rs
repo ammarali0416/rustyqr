@@ -1,13 +1,12 @@
 use colored::*;
 use crossterm::{
-    ExecutableCommand,
-    cursor::MoveTo,
-    event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, read},
-    terminal::{Clear, ClearType, disable_raw_mode, enable_raw_mode},
+    event::{self, Event, KeyCode, KeyEventKind},
+    terminal::{disable_raw_mode, enable_raw_mode},
 };
 use qrcode::QrCode;
 use qrcode::render::unicode;
-use std::io::Write;
+use std::io::{self, Write};
+use std::time::Duration;
 
 fn print_colorful_title() {
     let ascii_art = [
@@ -22,7 +21,7 @@ fn print_colorful_title() {
         "                                             ███ ▒███                               ",
         "                                            ▒▒██████                                ",
         "                                             ▒▒▒▒▒▒                                 ",
-        "I hate you qrco.de - Ammar"
+        "I hate you qrco.de - Ammar",
     ];
 
     for (i, line) in ascii_art.iter().enumerate() {
@@ -36,61 +35,6 @@ fn print_colorful_title() {
             _ => line.white().bold(),
         };
         println!("{}", colored_line);
-    }
-}
-
-fn interactive_menu() -> u8 {
-    let options = ["Output QR code in terminal", "Save QR code as PNG file"];
-    let mut selected = 0;
-    let mut stdout = std::io::stdout();
-    enable_raw_mode().unwrap();
-    loop {
-        // Only redraw the menu (no full clear)
-        stdout.execute(MoveTo(0, 0)).unwrap(); // ✅ THIS WORKS NOW
-        stdout.execute(Clear(ClearType::FromCursorDown)).unwrap();
-
-        println!("Choose an option (use ↑/↓ and Enter):");
-        for (i, opt) in options.iter().enumerate() {
-            if i == selected {
-                println!("{} {}", "▶".green().bold(), opt.green().bold());
-            } else {
-                println!("  {}", opt);
-            }
-        }
-
-        match read().unwrap() {
-            Event::Key(KeyEvent {
-                code: KeyCode::Up, ..
-            }) => {
-                if selected > 0 {
-                    selected -= 1;
-                }
-            }
-            Event::Key(KeyEvent {
-                code: KeyCode::Down,
-                ..
-            }) => {
-                if selected < options.len() - 1 {
-                    selected += 1;
-                }
-            }
-            Event::Key(KeyEvent {
-                code: KeyCode::Enter,
-                ..
-            }) => {
-                disable_raw_mode().unwrap();
-                return (selected + 1) as u8;
-            }
-            Event::Key(KeyEvent {
-                code: KeyCode::Char('c'),
-                modifiers: KeyModifiers::CONTROL,
-                ..
-            }) => {
-                disable_raw_mode().unwrap();
-                std::process::exit(0);
-            }
-            _ => {}
-        }
     }
 }
 
@@ -110,75 +54,104 @@ fn save_qr_png(code: &QrCode) {
 }
 
 fn read_line_crossterm() -> String {
-    use crossterm::event::{Event, KeyCode, read};
-    use crossterm::{cursor, execute, style::Print};
-    use std::io::{Write, stdout};
-
     let mut input = String::new();
-    let mut stdout = stdout();
 
     enable_raw_mode().unwrap();
+    // Ensure we always restore the terminal, even on panic/return.
+    struct RawGuard;
+    impl Drop for RawGuard {
+        fn drop(&mut self) {
+            let _ = disable_raw_mode();
+        }
+    }
+    let _guard = RawGuard;
 
     loop {
-        if let Event::Key(key_event) = read().unwrap() {
-            match key_event.code {
-                KeyCode::Char(c) => {
-                    input.push(c);
-                    execute!(stdout, Print(c)).unwrap();
-                    stdout.flush().unwrap();
+        // blocks until an event is available
+        let ev = event::read().unwrap();
+        match ev {
+            Event::Key(key) => {
+                // 🔑 IMPORTANT: only handle real key presses
+                if key.kind != KeyEventKind::Press {
+                    continue;
                 }
-                KeyCode::Backspace => {
-                    if input.pop().is_some() {
-                        execute!(stdout, cursor::MoveLeft(1), Print(" "), cursor::MoveLeft(1))
-                            .unwrap();
+                match key.code {
+                    KeyCode::Enter => {
+                        println!();
+                        drain_pending_events();
+                        break;
                     }
+                    KeyCode::Backspace => {
+                        if input.pop().is_some() {
+                            // erase one char visually
+                            print!("\x08 \x08");
+                            io::stdout().flush().unwrap();
+                        }
+                    }
+                    KeyCode::Char(c) => {
+                        input.push(c);
+                        // manually echo because raw mode disables terminal echo
+                        print!("{}", c);
+                        io::stdout().flush().unwrap();
+                    }
+                    _ => {}
                 }
-                KeyCode::Enter => {
-                    println!();
-                    break;
-                }
-                _ => {}
             }
+            // Optional: handle paste events as a whole chunk (no double echo)
+            Event::Paste(s) => {
+                input.push_str(&s);
+                print!("{}", s);
+                io::stdout().flush().unwrap();
+            }
+            _ => {}
         }
     }
 
-    crossterm::terminal::disable_raw_mode().unwrap();
     input
+}
+
+fn drain_pending_events() {
+    // Non-blocking: eat everything currently in the queue (including extra Enter / repeats)
+    while event::poll(Duration::from_millis(0)).unwrap_or(false) {
+        let _ = event::read();
+    }
 }
 
 fn main() {
     print_colorful_title();
     print!("\nEnter a URL to encode as a QR code: ");
     std::io::stdout().flush().unwrap();
-    let mut url = String::new();
-    std::io::stdin()
-        .read_line(&mut url)
-        .expect("Failed to read input");
-    let url = read_line_crossterm();
-    // Generate QR code
-    let code = QrCode::new(url).expect("Failed to generate QR code");
-    let string = code.render::<unicode::Dense1x2>().build();
-    // Interactive menu
-    let choice = interactive_menu();
-    match choice {
-        1 => {
-            println!("\n╔════════════════════════════════╗");
-            println!("║         QR CODE BELOW          ║");
-            println!("╚════════════════════════════════╝\n");
-            println!("{}", string);
-            println!("╔════════════════════════════════╗");
-            println!("║      SCAN ME IF YOU DARE!      ║");
-            println!("╚════════════════════════════════╝");
-        }
-        2 => {
-            save_qr_png(&code);
-        }
-        _ => {
-            let error_string: ColoredString =
-                "Invalid choice. Please run the program again and select 1 or 2.".red();
-            println!("{}", error_string);
-        }
+    // ✅ Read the URL **once** using your crossterm helper
+    let mut url = read_line_crossterm();
+    url = url.trim().to_string();
+
+    // ✅ basic validation
+    if url.is_empty() {
+        eprintln!("No URL entered — aborting.");
+        return;
     }
+
+    // ✅ make sure phones treat it as a link
+    // if !url.starts_with("http://") && !url.starts_with("https://") {
+    //     url = format!("https://{}", url);
+    // }
+
+    // ✅ generate the QR from the (possibly normalized) URL
+    let code = QrCode::new(&url).expect("Failed to generate QR code");
+    let string = code.render::<unicode::Dense1x2>().build();
+    // (interactive_menu removed: program is now non-interactive)
+    println!("\n╔════════════════════════════════╗");
+    println!("║         QR CODE BELOW          ║");
+    println!("╚════════════════════════════════╝\n");
+    println!("{}", string);
+    println!("╔════════════════════════════════╗");
+    println!("║      SCAN ME IF YOU DARE!      ║");
+    println!("╚════════════════════════════════╝");
+
+    // Save PNG automatically and show path
+    save_qr_png(&code);
+
+    // Press any key to exit
     // Wait for any key to exit
     println!("\nPress any key to exit...");
     enable_raw_mode().unwrap();
@@ -190,5 +163,4 @@ fn main() {
         }
     }
     disable_raw_mode().unwrap();
-
 }
